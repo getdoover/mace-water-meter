@@ -1,81 +1,119 @@
-# Doover Application Template
+# Mace Water Meter -- Development Guide
 
-This repository serves as a template for creating Doover applications.
+## Repository Structure
 
-It provides a structured layout for application code, deployment configurations, simulators, and tests. The template is
-designed to simplify the development and deployment of Doover-compatible applications.
+```
+README.md                   <-- User-facing app description
+DEVELOPMENT.md              <-- This file
+pyproject.toml              <-- Python project config and dependencies
+Dockerfile                  <-- Production Docker image
+doover_config.json          <-- Doover platform metadata (generated)
 
-The basic structure of the repository is as follows:
+src/mace_water_meter/
+  __init__.py               <-- Entry point (main function)
+  application.py            <-- Core application logic and UI handlers
+  app_config.py             <-- Configuration schema (Modbus ID, registers, etc.)
+  app_tags.py               <-- Declarative tags (display state, pump control)
+  app_ui.py                 <-- UI definition (flow gauge, event counters, maintenance)
+  app_state.py              <-- State machine (sleeping / awake_init / awake_rt)
+  record.py                 <-- Modbus register parser (IEEE 754 float from paired registers)
+
+simulators/
+  app_config.json           <-- Sample config for local development
+  docker-compose.yml        <-- Orchestrates device agent, modbus interface, simulator, and app
+  mace_sim/
+    main.py                 <-- Modbus TCP server emulating a Mace Agriflow meter
+    pyproject.toml           <-- Simulator dependencies
+    Dockerfile              <-- Simulator Docker image
+
+tests/
+  test_imports.py           <-- Import and basic validation tests
+```
+
+## Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Docker and Docker Compose (for simulator and deployment)
 
 ## Getting Started
 
-```
-README.md           <-- App description
-DEVELOPMENT.md      <-- This file
-pyproject.toml      <-- Python project configuration file (including dependencies)
-Dockerfile          <-- Dockerfile for building the application image
-doover_config.json  <-- Configuration file for doover
-
-src/app_template/   <-- Application directory
-  application.py    <-- Main application code
-  app_config.py     <-- Config schema definition
-  app_ui.py         <-- UI code (if applicable)
-  app_state.py      <-- State machine (if applicable)
-
-simulator/
-  app_config.json   <-- Sample configuration for the simulator
-  docker-compose.yml <-- Docker Compose file for the simulator
-  
-tests/
-    test_imports.py  <-- Test file for the application
-```
-
-The `doover_config.json` file is the doover configuration file for the application. 
-
-It defines all metadata about the application, including name, short and long description, 
-dependent apps, image name, owner organisation, container registry and more.
-
-### Prerequisites
-
-- Docker and Docker Compose installed
-- Python 3.11 or later (if running locally)
-- Pipenv for managing Python dependencies
-
-### Running Locally
-
-1. Run the application:
+### Install dependencies
 
 ```bash
-doover app run
+uv sync
 ```
 
-## Simulators
-
-The `simulator/` directory contains tools for simulating application behavior. For example:
-
-- `app_config.json`: Sample configuration file for the app.
-- `docker-compose.yml`: Defines services for running the application.
-
-You can find a sample simulator in the `simulator/sample/` directory. While it is fairly bare-bones, it shows
-positioning of the simulator in the application structure, and how to start the simulator alongside your application.
-
-## Testing
-
-Run the tests using the following command:
+### Run locally (with simulator)
 
 ```bash
-pytest tests/
+cd simulators
+docker compose up --build
 ```
 
-## Deployment
+This starts four services:
 
-The `deployment/` directory contains deployment configurations, including a `docker-compose.yml` file for orchestrating
-services.
+| Service | Description |
+|---------|-------------|
+| `device_agent` | Doover device agent |
+| `modbus_iface` | Modbus RTU/TCP bridge |
+| `mace_sim` | Mace Agriflow meter simulator (TCP on port 5020) |
+| `application` | This app, reading from the simulator |
 
-## Customization
+### Run tests
 
-To create your own Doover application:
+```bash
+uv run pytest tests/
+```
 
-1. Modify the application logic in the appropriate directory.
-2. Update the simulator and test configurations as needed.
-3. Adjust deployment configurations to suit your requirements.
+## Architecture
+
+### Data Flow
+
+```
+Mace Meter  -->  Modbus (RTU/TCP)  -->  modbus_iface  -->  Application  -->  Doover Platform
+                                                              |
+                                                              +--> Tags (pump control)
+                                                              +--> Channels (alerts)
+                                                              +--> UI (dashboard)
+```
+
+### Modbus Registers
+
+The app reads 20 holding registers (type 3) starting at address 0. Register addresses are configurable via the config schema. Each value occupies two consecutive 16-bit registers, parsed as a big-endian IEEE 754 32-bit float.
+
+Default register mapping:
+
+| Register | Description |
+|----------|-------------|
+| 5-6 | Cumulative total (ML) |
+| 7-8 | Current flow (ML/day) |
+| 9-10 | Battery voltage (V) |
+| 11-12 | Solar voltage (V) |
+| 1-2 | Velocity (m/s) -- optional |
+| 3-4 | Depth (m) -- optional |
+
+### State Machine
+
+| State | Description | Timeout |
+|-------|-------------|---------|
+| `initial` | Startup, transitions immediately to `awake_init` | -- |
+| `sleeping` | Low-power mode, no Modbus requests | 15 min |
+| `awake_init` | Waiting for first successful reading | 15s |
+| `awake_rt` | Real-time reading mode, actively polling | 2 min |
+
+### UI
+
+The UI uses static declarative elements with `setup()` to configure config-dependent properties (precision based on `max_flow`, flow gauge ranges, shutdown visibility).
+
+## Regenerating doover_config.json
+
+```bash
+uv run export-config
+```
+
+## Building the Docker Image
+
+```bash
+docker build -t mace-water-meter .
+```

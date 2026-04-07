@@ -1,10 +1,10 @@
 from pydoover.docker import run_app
 
 from .application import MaceWaterMeterApplication
-from .app_config import MaceWaterMeterConfig
+
 
 def main():
     """
-    Run the application.
+    Run the Mace Water Meter application.
     """
-    run_app(MaceWaterMeterApplication(config=MaceWaterMeterConfig()))
+    run_app(MaceWaterMeterApplication())
