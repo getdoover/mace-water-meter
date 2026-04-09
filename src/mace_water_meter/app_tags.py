@@ -2,8 +2,6 @@ from pydoover.tags import Tag, Tags
 
 
 class MaceWaterMeterTags(Tags):
-    app_display_name = Tag("string", default="Mace Water Meter")
-
     # Display values (updated each loop from modbus readings)
     last_flow = Tag("number", default=None)
     last_event_counter = Tag("number", default=None)
@@ -17,7 +15,12 @@ class MaceWaterMeterTags(Tags):
     last_time_non_zero_flow = Tag("number", default=0)
     last_event_counter_zero = Tag("number", default=0)
 
+    # User-set thresholds (set via UI handlers)
+    shutdown_threshold = Tag("number", default=None)
+
     # Cross-app tags for pump control
     alert_triggered = Tag("boolean", default=False)
     alert_message_short = Tag("string", default=None)
     alert_message_long = Tag("string", default=None)
+
+    app_display_name = Tag("string", default="Mace Water Meter")

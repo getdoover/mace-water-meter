@@ -11,6 +11,19 @@ DEFAULT_WAKE_DELAY = 15  # 15 seconds
 log = logging.getLogger(__name__)
 
 
+def get_sleep_time(voltage: float) -> float:
+    if voltage is None or voltage > 12.9:
+        return DEFAULT_SLEEP_TIME
+
+    if 12.5 < voltage <= 12.9:
+        return DEFAULT_SLEEP_TIME * 1.5
+    if 12.2 < voltage <= 12.5:
+        return DEFAULT_SLEEP_TIME * 3
+
+    # voltage <= 12.2
+    return DEFAULT_SLEEP_TIME * 5
+
+
 class MaceWaterMeterState:
     state: str
 
@@ -29,7 +42,8 @@ class MaceWaterMeterState:
         {"trigger": "initialise", "source": "initial", "dest": "awake_init"},
         {"trigger": "awaken", "source": "sleeping", "dest": "awake_init"},
         {"trigger": "initialised", "source": "awake_init", "dest": "awake_rt"},
-        {"trigger": "goto_sleep", "source": ["awake_init", "awake_rt"], "dest": "sleeping"},
+        {"trigger": "goto_sleep", "source": "awake_init", "dest": "sleeping"},
+        {"trigger": "goto_sleep", "source": "awake_rt", "dest": "sleeping"},
     ]
 
     def __init__(self):
@@ -44,6 +58,10 @@ class MaceWaterMeterState:
         self.should_request = False
 
     async def spin(self, battery_voltage: float):
+        self.state_machine.get_state("sleeping").timeout = get_sleep_time(
+            battery_voltage
+        )
+
         if self.state == "initial":
             await self.initialise()
 

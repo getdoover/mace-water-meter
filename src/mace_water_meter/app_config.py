@@ -8,7 +8,9 @@ from pydoover.docker.modbus import ModbusConfig
 class MaceWaterMeterConfig(config.Schema):
     modbus_id = config.Integer("Modbus ID", description="Modbus ID for the meter")
     max_flow = config.Integer(
-        "Max Flow", description="Max flow value for the meter", minimum=0
+        "Max Flow",
+        description="Max flow value for the meter",
+        exclusive_minimum=0,
     )
     allow_shutdown = config.Boolean(
         "Allow Shutdown", description="Allow shutdown of the pump", default=True

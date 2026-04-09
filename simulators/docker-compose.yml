@@ -1,12 +1,12 @@
 services:
-  device_agent:
-    image: spaneng/doover_device_agent:apps
-    ports:
-      - 50051:50051
-
-  modbus_iface:
-    image: spaneng/doover_modbus_iface
-    network_mode: host
+#  device_agent:
+#    image: spaneng/doover_device_agent:apps
+#    ports:
+#      - 50051:50051
+#
+#  modbus_iface:
+#    image: spaneng/doover_modbus_iface
+#    network_mode: host
 
   mace_sim:
     build: ./mace_sim

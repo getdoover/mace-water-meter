@@ -16,7 +16,6 @@
         "image_name": "ghcr.io/getdoover/mace-water-meter:main",
         "container_registry_profile_id": "93955828574386692",
         "build_args": "--platform linux/amd64,linux/arm64",
-        "export_ui_command": "NO_EXPORT",
         "config_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "",
@@ -40,7 +39,7 @@
                     "x-required": true,
                     "description": "Max flow value for the meter",
                     "x-position": 1,
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "allow_shutdown": {
                     "title": "Allow Shutdown",

@@ -4,51 +4,71 @@ from .app_config import MaceWaterMeterConfig
 from .app_tags import MaceWaterMeterTags
 
 
-class MaceWaterMeterUI(ui.UI):
+class MaceWaterMeterUI(
+    ui.UI, display_name=MaceWaterMeterTags.app_display_name
+):
     config: MaceWaterMeterConfig
 
-    last_flow = ui.NumericVariable(
-        "Flow (ML/day)",
-        value=MaceWaterMeterTags.last_flow,
-        form=ui.Widget.radial,
+    tabs = ui.TabContainer(
+        display_name="Tabs",
+        children=[
+            ui.Container(
+                "Meter",
+                children=[
+                    ui.NumericVariable(
+                        "Flow",
+                        units="ML/day",
+                        value=MaceWaterMeterTags.last_flow,
+                        form=ui.Widget.radial,
+                    ),
+                    ui.NumericVariable(
+                        "Meter Total",
+                        units="ML",
+                        value=MaceWaterMeterTags.last_total,
+                    ),
+                    ui.Timestamp(
+                        "Last Read",
+                        value=MaceWaterMeterTags.time_last_update,
+                    ),
+                    ui.Button("Get Now"),
+                ],
+            ),
+            ui.Container(
+                "Event",
+                children=[
+                    ui.NumericVariable(
+                        "This Event",
+                        units="ML",
+                        value=MaceWaterMeterTags.last_event_counter,
+                    ),
+                    ui.FloatInput(
+                        "Send Alert At",
+                        name="alert_counter",
+                        units="ML",
+                        min_val=0,
+                        help_str="Send a notification when event total reaches this value (ML)",
+                        default=None,
+                    ),
+                    ui.FloatInput(
+                        "Shutdown Pump At",
+                        name="shutdown_counter",
+                        units="ML",
+                        min_val=0,
+                        help_str="Stop pumping when event total reaches this value (ML)",
+                        default=None,
+                    ),
+                    ui.Button("Reset Event", requires_confirm=True),
+                ],
+            ),
+        ]
     )
-
-    last_event_counter = ui.NumericVariable(
-        "This Event (ML)",
-        value=MaceWaterMeterTags.last_event_counter,
-    )
-
-    alert_counter = ui.FloatInput(
-        "Alert Counter",
-        min_val=0,
-        help_str="Send a text notification when event total reaches this value (ML)",
-    )
-
-    shutdown_counter = ui.FloatInput(
-        "Shutdown Counter",
-        min_val=0,
-        help_str="Stop pumping when event total reaches this value (ML)",
-    )
-
-    reset_event = ui.Button("Reset Event", requires_confirm=True)
-
-    last_total = ui.NumericVariable(
-        "Meter Total (ML)",
-        value=MaceWaterMeterTags.last_total,
-    )
-
-    time_last_update = ui.Timestamp(
-        "Time Since Last Read",
-        value=MaceWaterMeterTags.time_last_update,
-    )
-
-    get_now = ui.Button("Get Now")
 
     maintenance = ui.Submodule(
         "Maintenance",
         children=[
             ui.NumericVariable(
-                "Battery (V)",
+                "Battery",
+                units="V",
                 value=MaceWaterMeterTags.last_batt_volts,
                 precision=1,
                 ranges=[
@@ -59,7 +79,8 @@ class MaceWaterMeterUI(ui.UI):
                 ],
             ),
             ui.NumericVariable(
-                "Solar (V)",
+                "Solar",
+                units="V",
                 value=MaceWaterMeterTags.last_solar_volts,
                 precision=1,
                 ranges=[
@@ -77,16 +98,17 @@ class MaceWaterMeterUI(ui.UI):
 
     async def setup(self):
         max_flow = self.config.max_flow.value
-        precision = 1 if max_flow >= 100 else 2
 
-        self.last_flow.precision = precision
-        self.last_flow.ranges = [
+        for elem in (self.tabs.meter.flow, self.tabs.meter.meter_total, self.tabs.event.this_event):
+            elem.precision = 1 if max_flow >= 100 else 2
+
+        self.tabs.meter.flow.ranges = [
             ui.Range(None, 0, max_flow * 0.15, ui.Colour.blue),
             ui.Range(None, max_flow * 0.15, max_flow, ui.Colour.green),
         ]
 
-        self.last_event_counter.precision = precision
-        self.last_total.precision = precision
+        self.tabs.event.shutdown_counter.hidden = not self.config.allow_shutdown.value
 
-        if not self.config.allow_shutdown.value:
-            self.shutdown_counter.hidden = True
+
+def export():
+    pass
