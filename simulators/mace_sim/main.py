@@ -73,6 +73,8 @@ class MaceAgriflowSim:
         depth_register: int,
         flow_rate_register: int,
         totals_register: int,
+        battery_register: int,
+        solar_register: int,
     ):
         self.device_id = device_id
         self.host = host
@@ -82,11 +84,15 @@ class MaceAgriflowSim:
         self.depth_reg = depth_register
         self.flow_rate_reg = flow_rate_register
         self.totals_reg = totals_register
+        self.battery_reg = battery_register
+        self.solar_reg = solar_register
 
         self.current_flow_vel = 3.5
         self.current_flow_depth = 1.2
         self.current_flow_megs = 160
         self.last_output_flow_megs = self.current_flow_megs
+        self.current_battery_volts = 12.8
+        self.current_solar_volts = 18.5
 
         self.last_totals_update_time = time.time()
         self.current_total = 73495  # kilolitres
@@ -146,7 +152,7 @@ class MaceAgriflowSim:
 
     def set_register(self, reg: int, value: int):
         log.debug(f"Setting register {reg} to {value}")
-        return self.context.setValues(0x03, reg, [int(value)])
+        return self.context.setValues(0x04, reg, [int(value)])
 
     @staticmethod
     def megs_per_day_to_l_per_sec(in_val):
@@ -162,13 +168,13 @@ class MaceAgriflowSim:
 
     def split_and_set_f32(self, reg: int, value: float):
         high, low = split_f32(value)
-        self.set_register(reg, high)
-        self.set_register(reg + 1, low)
+        self.set_register(reg - 1, high)
+        self.set_register(reg, low)
 
     def split_and_set_i32(self, reg: int, value: int):
         high, low = split_i32(value)
-        self.set_register(reg, high)
-        self.set_register(reg + 1, low)
+        self.set_register(reg - 1, high)
+        self.set_register(reg, low)
 
     def generate_output_values(self, target_flow: int):
         self.update_totals()
@@ -182,12 +188,16 @@ class MaceAgriflowSim:
             )
             self.split_and_set_f32(self.flow_rate_reg, add_noise(target_flow, 0.5))
             self.split_and_set_f32(self.totals_reg, self.current_total)
+            self.split_and_set_f32(self.battery_reg, add_noise(self.current_battery_volts, 0.2))
+            self.split_and_set_f32(self.solar_reg, add_noise(self.current_solar_volts, 1.0))
         else:
             for reg in (
                 self.velocity_reg,
                 self.depth_reg,
                 self.flow_rate_reg,
                 self.totals_reg,
+                self.battery_reg,
+                self.solar_reg,
             ):
                 self.split_and_set_i32(reg, 0)
 
@@ -246,8 +256,10 @@ if __name__ == "__main__":
         int(os.environ.get("MODBUS_PORT", 5020)),
         int(os.environ.get("VELOCITY_REGISTER", 1)),
         int(os.environ.get("DEPTH_REGISTER", 2)),
-        int(os.environ.get("FLOW_RATE_REGISTER", 3)),
-        int(os.environ.get("TOTALS_REGISTER", 4)),
+        int(os.environ.get("FLOW_RATE_REGISTER", 7)),
+        int(os.environ.get("TOTALS_REGISTER", 5)),
+        int(os.environ.get("BATTERY_REGISTER", 9)),
+        int(os.environ.get("SOLAR_REGISTER", 11)),
     )
     logging.basicConfig(
         level=logging.DEBUG if os.environ.get("DEBUG") else logging.INFO

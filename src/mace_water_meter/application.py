@@ -42,18 +42,6 @@ class MaceWaterMeterApplication(Application):
 
     async def main_loop(self):
         log.info(f"State: {self.state.state}, Flow: {self.last_flow}")
-        # Update display name with current flow
-        if self.last_flow is not None:
-            if self.last_flow == 0:
-                display_string = "0 ML/day"
-            elif self.last_flow < 10:
-                display_string = f"{round(self.last_flow, 1)} ML/day"
-            else:
-                display_string = f"{round(self.last_flow, 0)} ML/day"
-        else:
-            display_string = " - ML/day"
-
-        await self.tags.app_display_name.set(f"{self.app_display_name}: {display_string}")
 
         # Update UI via tags
         await self._update_display_tags()
@@ -89,6 +77,19 @@ class MaceWaterMeterApplication(Application):
         await self._check_for_pump_shutdown()
 
     async def _update_display_tags(self):
+        # Update display name with current flow
+        if self.last_flow is not None:
+            if self.last_flow == 0:
+                display_string = "0 ML/day"
+            elif self.last_flow < 10:
+                display_string = f"{round(self.last_flow, 1)} ML/day"
+            else:
+                display_string = f"{round(self.last_flow, 0)} ML/day"
+        else:
+            display_string = " - ML/day"
+
+        await self.tags.app_display_name.set(f"{self.app_display_name}: {display_string}")
+
         await self.tags.last_flow.set(self.last_flow)
         await self.tags.comms_active.set(
             self.state.state != "sleeping" if self.state else False

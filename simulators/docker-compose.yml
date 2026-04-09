@@ -16,11 +16,11 @@ services:
     build: ../
     network_mode: host
     restart: unless-stopped
-    depends_on:
-      - device_agent
-      - modbus_iface
-      - mace_sim
+#    depends_on:
+#      - device_agent
+#      - modbus_iface
+#      - mace_sim
     environment:
-      - APP_KEY=test_app_key
-      - CONFIG_FP=/app/simulators/app_config.json
-      - DDA_URI=127.0.0.1:50051
+      - APP_KEY=mace_water_meter_1
+#      - CONFIG_FP=/app/simulators/app_config.json
+#      - DDA_URI=127.0.0.1:50051
