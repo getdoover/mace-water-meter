@@ -158,8 +158,12 @@ class MaceWaterMeterApplication(Application):
             return
 
         log.info(f"Got result: {result}")
-        self.last_record = Record(result, self.config)
         self.last_request_time = time.time()
+        if result is None:
+            log.info("Modbus request returned no data, skipping record update")
+            return
+
+        self.last_record = Record(result, self.config)
 
         self.last_flow = self.last_record.current_flow
         log.info(f"Last flow: {self.last_flow}")
