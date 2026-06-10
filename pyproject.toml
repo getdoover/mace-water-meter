@@ -5,7 +5,7 @@ description = "Mace Water Meter application for monitoring water flow via Modbus
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydoover>=1.1.0",
+    "pydoover>=1.4.2",
     "transitions>=0.9.2",
 ]
 
