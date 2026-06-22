@@ -15,6 +15,8 @@ class Record:
     def read_both_registers(self, reg_num) -> float | None:
         if reg_num is None:
             return None
+        if reg_num < 1 or reg_num >= len(self.register_values):
+            return None
         high = self.register_values[reg_num - 1]
         low = self.register_values[reg_num]
 
